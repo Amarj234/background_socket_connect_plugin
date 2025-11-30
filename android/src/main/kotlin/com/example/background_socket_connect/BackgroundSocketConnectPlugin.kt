@@ -19,7 +19,6 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
     private var webSocket: WebSocket? = null
     private var client: OkHttpClient? = null
     private var isInBackground = false
-    private var keepAliveJob: Job? = null
     private var reconnectJob: Job? = null
     private var currentUrl: String? = null
     private var currentHeaders: Map<String, String> = emptyMap()
@@ -85,7 +84,7 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
                 .readTimeout(0, TimeUnit.MILLISECONDS) // No timeout for WebSocket
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
-            // Remove pingInterval since server doesn't like our pings
+                .pingInterval(0, TimeUnit.SECONDS) // Disable OkHttp ping completely
 
             // For WS connections, configure to bypass security
             if (url.startsWith("ws://")) {
@@ -114,8 +113,7 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
                     CoroutineScope(Dispatchers.Main).launch {
                         channel.invokeMethod("onConnected", null)
                     }
-                    // Start server-compatible keep-alive when connected
-                    startServerCompatibleKeepAlive()
+                    // Don't start any keep-alive - server handles it
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
@@ -125,8 +123,8 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
                         channel.invokeMethod("onMessage", messageMap)
                     }
 
-                    // Server sends its own ping messages, don't respond with pong
-                    // Let the server handle its own ping/pong protocol
+                    // Completely ignore ping messages - do NOT respond
+                    // Server sends {"type":"ping"} but doesn't expect any response
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -135,7 +133,6 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
                         val disconnectMap = mapOf("code" to code, "reason" to reason)
                         channel.invokeMethod("onDisconnected", disconnectMap)
                     }
-                    stopKeepAlive()
                     stopAutoReconnect()
                 }
 
@@ -145,7 +142,6 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
                         val errorMap = mapOf("error" to (t.message ?: "Unknown error"))
                         channel.invokeMethod("onError", errorMap)
                     }
-                    stopKeepAlive()
 
                     // Auto-reconnect after delay if in background mode
                     if (isInBackground) {
@@ -159,7 +155,6 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
                         val disconnectMap = mapOf("code" to code, "reason" to reason)
                         channel.invokeMethod("onDisconnected", disconnectMap)
                     }
-                    stopKeepAlive()
                     stopAutoReconnect()
                 }
             })
@@ -192,33 +187,6 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
         } catch (e: Exception) {
             println("SSL configuration failed: ${e.message}")
         }
-    }
-
-    private fun startServerCompatibleKeepAlive() {
-        stopKeepAlive()
-
-        // Instead of sending ping messages (which the server rejects),
-        // we'll send a harmless keep-alive message that the server accepts
-        keepAliveJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive && webSocket != null) {
-                delay(30000) // Send keep-alive every 30 seconds
-                try {
-                    // Send a simple message that won't trigger server errors
-                    // You can modify this based on what your server expects
-                    webSocket?.send("""{"type":"keep_alive","timestamp":${System.currentTimeMillis()}}""")
-                    println("Sent server-compatible keep-alive")
-                } catch (e: Exception) {
-                    // Connection might be dead, stop keep-alive
-                    println("Keep-alive failed: ${e.message}")
-                    break
-                }
-            }
-        }
-    }
-
-    private fun stopKeepAlive() {
-        keepAliveJob?.cancel()
-        keepAliveJob = null
     }
 
     private fun startAutoReconnect() {
@@ -270,7 +238,6 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
 
     private fun disconnectWebSocket(result: Result) {
         try {
-            stopKeepAlive()
             stopAutoReconnect()
 
             webSocket?.close(1000, "Normal closure")
@@ -303,10 +270,7 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
 
     private fun setBackgroundMode(enabled: Boolean, result: Result) {
         isInBackground = enabled
-        if (enabled && webSocket != null) {
-            startServerCompatibleKeepAlive()
-        } else {
-            stopKeepAlive()
+        if (!enabled) {
             stopAutoReconnect()
         }
         result.success(true)
@@ -314,22 +278,9 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
 
     private fun startBackgroundService(result: Result) {
         try {
-            val workManager = context?.let { WorkManager.getInstance(it) }
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val socketWorkRequest = PeriodicWorkRequestBuilder<SocketWorker>(
-                15, TimeUnit.MINUTES
-            ).setConstraints(constraints)
-                .build()
-
-            workManager?.enqueueUniquePeriodicWork(
-                "background_socket_work",
-                ExistingPeriodicWorkPolicy.KEEP,
-                socketWorkRequest
-            )
-
+            // For now, just enable background mode
+            // You can enhance this with actual WorkManager logic later
+            isInBackground = true
             result.success(true)
         } catch (e: Exception) {
             result.error("SERVICE_START_FAILED", e.message, null)
@@ -338,8 +289,9 @@ class BackgroundSocketConnectPlugin : FlutterPlugin, MethodCallHandler {
 
     private fun stopBackgroundService(result: Result) {
         try {
-            val workManager = context?.let { WorkManager.getInstance(it) }
-            workManager?.cancelUniqueWork("background_socket_work")
+            // For now, just disable background mode
+            isInBackground = false
+            stopAutoReconnect()
             result.success(true)
         } catch (e: Exception) {
             result.error("SERVICE_STOP_FAILED", e.message, null)
