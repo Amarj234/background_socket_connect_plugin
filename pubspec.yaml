@@ -1,7 +1,8 @@
 name: background_socket_connect
-description: "A new Flutter plugin project."
+description: Flutter plugin for background WebSocket connection with Android foreground service support.
 version: 0.0.1
-homepage:
+homepage: https://amarj234.github.io/
+repository: https://github.com/Amarj234/map_route_package.git
 
 environment:
   sdk: ^3.9.2
