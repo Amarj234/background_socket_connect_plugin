@@ -22,7 +22,7 @@ A Flutter plugin for establishing and maintaining persistent WebSocket connectio
 
 ## 🎥 Demo Video
 
-[![Watch the demo](https://raw.githubusercontent.com/Amarj234/map_route_package/refs/heads/main/Screenshot%202025-10-01%20at%2011.16.32%E2%80%AFAM.png)](https://github.com/Amarj234/map_route_package/blob/main/Screen_recording_20250925_145039%20(1).mp4)
+[![Watch the demo](https://raw.githubusercontent.com/Amarj234/background_socket_connect_plugin/refs/heads/main/Screenshot%202025-11-30%20at%201.38.37%E2%80%AFPM.png)](https://github.com/Amarj234/map_route_package/blob/main/Screen_recording_20250925_145039%20(1).mp4)
 
 Click the image above to watch the demo video.
 
@@ -188,7 +188,7 @@ Navigation Features
 Background Mode
 Enable background persistence:
 
-dart
+```dart
 // Enable background mode
 await _socket.setBackgroundMode(true);
 
@@ -211,6 +211,7 @@ headers: {
 'X-Custom-Header': 'custom-value',
 },
 );
+```
 🎯 API Reference
 Methods
 Method	Description	Parameters
