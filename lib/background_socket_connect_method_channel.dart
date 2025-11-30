@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'background_socket_connect_platform_interface.dart';
 
 class MethodChannelBackgroundSocketConnect extends BackgroundSocketConnectPlatform {
-  final MethodChannel _methodChannel = const MethodChannel('background_socket_connect');
+  final MethodChannel _methodChannel =
+  const MethodChannel('background_socket_connect');
 
   Function()? _onConnected;
   Function(String)? _onMessage;
@@ -19,17 +20,20 @@ class MethodChannelBackgroundSocketConnect extends BackgroundSocketConnectPlatfo
       case 'onConnected':
         _onConnected?.call();
         break;
+
       case 'onMessage':
-        final String message = call.arguments['message'];
+        final String message = call.arguments?['message'] ?? "";
         _onMessage?.call(message);
         break;
+
       case 'onDisconnected':
-        final int code = call.arguments['code'];
-        final String reason = call.arguments['reason'];
+        final int code = call.arguments?['code'] ?? -1;
+        final String reason = call.arguments?['reason'] ?? "";
         _onDisconnected?.call(code, reason);
         break;
+
       case 'onError':
-        final String error = call.arguments['error'];
+        final String error = call.arguments?['error'] ?? "Unknown error";
         _onError?.call(error);
         break;
     }
@@ -37,57 +41,53 @@ class MethodChannelBackgroundSocketConnect extends BackgroundSocketConnectPlatfo
 
   @override
   Future<bool> connect({required String url, Map<String, String>? headers}) async {
-    try {
-      final result = await _methodChannel.invokeMethod('connect', {
-        'url': url,
-        'headers': headers ?? {},
-      });
-      return result == true;
-    } on PlatformException catch (e) {
-      throw Exception('Failed to connect: ${e.message}');
-    }
+    final result = await _methodChannel.invokeMethod('connect', {
+      'url': url,
+      'headers': headers ?? {},
+    });
+    return result == true;
   }
 
   @override
   Future<bool> disconnect() async {
-    try {
-      final result = await _methodChannel.invokeMethod('disconnect');
-      return result == true;
-    } on PlatformException catch (e) {
-      throw Exception('Failed to disconnect: ${e.message}');
-    }
+    final result = await _methodChannel.invokeMethod('disconnect');
+    return result == true;
   }
 
   @override
   Future<bool> sendMessage(String message) async {
-    try {
-      final result = await _methodChannel.invokeMethod('sendMessage', {
-        'message': message,
-      });
-      return result == true;
-    } on PlatformException catch (e) {
-      throw Exception('Failed to send message: ${e.message}');
-    }
+    final result = await _methodChannel.invokeMethod('sendMessage', {
+      'message': message,
+    });
+    return result == true;
   }
 
   @override
   Future<bool> startBackgroundService() async {
-    try {
-      final result = await _methodChannel.invokeMethod('startBackgroundService');
-      return result == true;
-    } on PlatformException catch (e) {
-      throw Exception('Failed to start background service: ${e.message}');
-    }
+    final result =
+    await _methodChannel.invokeMethod('startBackgroundService');
+    return result == true;
   }
 
   @override
   Future<bool> stopBackgroundService() async {
-    try {
-      final result = await _methodChannel.invokeMethod('stopBackgroundService');
-      return result == true;
-    } on PlatformException catch (e) {
-      throw Exception('Failed to stop background service: ${e.message}');
-    }
+    final result =
+    await _methodChannel.invokeMethod('stopBackgroundService');
+    return result == true;
+  }
+
+  @override
+  Future<bool> getConnectionStatus() async {
+    final result = await _methodChannel.invokeMethod('getConnectionStatus');
+    return result == true;
+  }
+
+  @override
+  Future<bool> setBackgroundMode(bool enabled) async {
+    final result = await _methodChannel.invokeMethod('setBackgroundMode', {
+      'enabled': enabled,
+    });
+    return result == true;
   }
 
   @override
@@ -108,29 +108,5 @@ class MethodChannelBackgroundSocketConnect extends BackgroundSocketConnectPlatfo
   @override
   void setOnErrorCallback(Function(String error) callback) {
     _onError = callback;
-  }
-
-
-
-  @override
-  Future<bool> getConnectionStatus() async {
-    try {
-      final result = await _methodChannel.invokeMethod('getConnectionStatus');
-      return result == true;
-    } on PlatformException catch (e) {
-      throw Exception('Failed to get connection status: ${e.message}');
-    }
-  }
-
-  @override
-  Future<bool> setBackgroundMode(bool enabled) async {
-    try {
-      final result = await _methodChannel.invokeMethod('setBackgroundMode', {
-        'enabled': enabled,
-      });
-      return result == true;
-    } on PlatformException catch (e) {
-      throw Exception('Failed to set background mode: ${e.message}');
-    }
   }
 }
