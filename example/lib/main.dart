@@ -56,7 +56,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _connect() async {
     try {
       await _socket.connect(
-        url: 'ws://64.227.163.175:8000/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjhhODExNGZjOWVmNmI1MDlmNDI3Y2Y2IiwibW9iaWxlIjoiOTE4MzE3MDA4OTc5Iiwicm9sZXMiOlsicHJvdmlkZXIiXSwiZXhwIjoxNzY2NjY4MTY3fQ.zIN8d8rAzFdRFMs0-6yihB_Q1xbC5I8NYdgt8mrxpkg',
+        url: 'wss://your-server.com/ws',
         headers: {
           'User-Agent': 'FlutterSocketClient/1.0',
         },
